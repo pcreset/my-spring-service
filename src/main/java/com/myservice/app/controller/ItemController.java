@@ -5,7 +5,8 @@ import com.myservice.app.model.Item;
 import com.myservice.app.service.ItemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,11 +25,12 @@ import java.util.List;
  *   PUT    /api/v1/items/{id}   - update item
  *   DELETE /api/v1/items/{id}   - delete item
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/items")
 @RequiredArgsConstructor
 public class ItemController {
+
+    private static final Logger log = LoggerFactory.getLogger(ItemController.class);
 
     private final ItemService itemService;
 

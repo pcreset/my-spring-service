@@ -2,7 +2,8 @@ package com.myservice.app.service;
 
 import com.myservice.app.exception.ResourceNotFoundException;
 import com.myservice.app.model.Item;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,9 +17,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * Service layer for Item operations.
  * Uses an in-memory store for now — swap this for a JPA repository when ready.
  */
-@Slf4j
 @Service
 public class ItemService {
+
+    private static final Logger log = LoggerFactory.getLogger(ItemService.class);
 
     // In-memory data store (replace with JPA repository later)
     private final Map<Long, Item> store = new ConcurrentHashMap<>();

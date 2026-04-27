@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -22,6 +23,7 @@ import java.util.*;
 public class FileDataService {
 
     private static final Logger log = LoggerFactory.getLogger(FileDataService.class);
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("MM-dd-yyyy");
 
     @Value("${app.data.directory}")
     private String dataDirectory;
@@ -86,7 +88,7 @@ public class FileDataService {
         return switch (cell.getCellType()) {
             case STRING  -> cell.getStringCellValue();
             case NUMERIC -> DateUtil.isCellDateFormatted(cell)
-                    ? cell.getLocalDateTimeCellValue().toString()
+                    ? cell.getLocalDateTimeCellValue().toLocalDate().format(DATE_FORMAT)
                     : cell.getNumericCellValue();
             case BOOLEAN -> cell.getBooleanCellValue();
             case FORMULA -> cell.getCachedFormulaResultType() == CellType.NUMERIC

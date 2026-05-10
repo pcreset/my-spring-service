@@ -14,8 +14,10 @@ import java.util.Map;
 /**
  * REST controller for loading Excel file data.
  *
- * GET /api/v1/data/files          - list available .xlsx files
- * GET /api/v1/data/load?file=name - load file and return rows as JSON
+ * GET  /api/v1/data/files               - list available .xlsx files
+ * GET  /api/v1/data/load?file=name      - load file (cached after first read)
+ * POST /api/v1/data/cache/evict?file=   - evict one file from cache
+ * POST /api/v1/data/cache/clear         - clear entire cache
  */
 @RestController
 @RequestMapping("/api/v1/data")
@@ -38,5 +40,19 @@ public class FileDataController {
         log.info("Request to load file: {}", filename);
         List<Map<String, Object>> rows = fileDataService.loadFile(filename);
         return ResponseEntity.ok(ApiResponse.ok("Loaded " + rows.size() + " row(s)", rows));
+    }
+
+    /** Evict a single file from the in-memory cache. */
+    @PostMapping("/cache/evict")
+    public ResponseEntity<ApiResponse<Void>> evictCache(@RequestParam("file") String filename) {
+        fileDataService.evictCache(filename);
+        return ResponseEntity.ok(ApiResponse.ok("Cache cleared for: " + filename, null));
+    }
+
+    /** Clear the entire file data cache. */
+    @PostMapping("/cache/clear")
+    public ResponseEntity<ApiResponse<Void>> clearAllCaches() {
+        fileDataService.evictAllCaches();
+        return ResponseEntity.ok(ApiResponse.ok("All file caches cleared", null));
     }
 }

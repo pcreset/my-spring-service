@@ -1,6 +1,7 @@
 package com.myservice.app.controller;
 
 import com.myservice.app.model.ApiResponse;
+import com.myservice.app.model.UpdateRowRequest;
 import com.myservice.app.service.FileDataService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -40,6 +41,22 @@ public class FileDataController {
         log.info("Request to load file: {}", filename);
         List<Map<String, Object>> rows = fileDataService.loadFile(filename);
         return ResponseEntity.ok(ApiResponse.ok("Loaded " + rows.size() + " row(s)", rows));
+    }
+
+    /** Update a single row in the cached data with the provided field changes. */
+    @PutMapping("/row")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateRow(@RequestBody UpdateRowRequest req) {
+        log.info("Update row {} in {}", req.rowIndex(), req.file());
+        Map<String, Object> updated = fileDataService.updateRow(req.file(), req.rowIndex(), req.changes());
+        return ResponseEntity.ok(ApiResponse.ok("Row updated", updated));
+    }
+
+    /** Write the current cached data for a file back to disk. */
+    @PostMapping("/dump")
+    public ResponseEntity<ApiResponse<Void>> dumpToFile(@RequestParam("file") String filename) {
+        log.info("Dump cache to file: {}", filename);
+        fileDataService.dumpToFile(filename);
+        return ResponseEntity.ok(ApiResponse.ok("Dumped to: " + filename, null));
     }
 
     /** Evict a single file from the in-memory cache. */

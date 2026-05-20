@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -94,6 +95,68 @@ public class FileDataService {
         }
     }
 
+    /**
+     * Update a single row in the cached data. Mutates the cached list directly,
+     * so the change is visible to all subsequent loadFile calls without a cache miss.
+     */
+    public Map<String, Object> updateRow(String filename, int rowIndex, Map<String, Object> changes) {
+        List<Map<String, Object>> rows = loadFile(filename);
+        if (rowIndex < 0 || rowIndex >= rows.size()) {
+            throw new IllegalArgumentException(
+                    "Row index " + rowIndex + " out of bounds (size=" + rows.size() + ")");
+        }
+        Map<String, Object> row = rows.get(rowIndex);
+        row.putAll(changes);
+        log.info("Updated row {} in {} with {} change(s)", rowIndex, filename, changes.size());
+        return row;
+    }
+
+    /**
+     * Write the current cached data back to the Excel file on disk.
+     * Preserves the existing header row; overwrites data rows in place.
+     */
+    public void dumpToFile(String filename) {
+        if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            throw new IllegalArgumentException("Invalid filename: " + filename);
+        }
+
+        List<Map<String, Object>> rows = loadFile(filename);
+        File file = new File(dataDirectory, filename);
+
+        try (FileInputStream fis = new FileInputStream(file);
+             Workbook workbook = new XSSFWorkbook(fis)) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+            Row headerRow = sheet.getRow(0);
+            if (headerRow == null) return;
+
+            List<String> headers = new ArrayList<>();
+            for (Cell cell : headerRow) {
+                headers.add(cell.getStringCellValue().trim());
+            }
+
+            for (int i = 0; i < rows.size(); i++) {
+                Row row = sheet.getRow(i + 1);
+                if (row == null) row = sheet.createRow(i + 1);
+                Map<String, Object> rowData = rows.get(i);
+                for (int j = 0; j < headers.size(); j++) {
+                    Cell cell = row.getCell(j, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                    setCellValue(cell, rowData.get(headers.get(j)));
+                }
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(file)) {
+                workbook.write(fos);
+            }
+
+            log.info("Dumped {} rows back to {}", rows.size(), filename);
+
+        } catch (IOException e) {
+            log.error("Failed to dump file: {}", filename, e);
+            throw new RuntimeException("Failed to dump file: " + filename, e);
+        }
+    }
+
     /** Remove a single file from the cache so the next load re-reads from disk. */
     @CacheEvict(value = "fileData", key = "#filename")
     public void evictCache(String filename) {
@@ -104,6 +167,18 @@ public class FileDataService {
     @CacheEvict(value = "fileData", allEntries = true)
     public void evictAllCaches() {
         log.info("All file data caches cleared");
+    }
+
+    private void setCellValue(Cell cell, Object value) {
+        if (value == null) {
+            cell.setBlank();
+        } else if (value instanceof Number n) {
+            cell.setCellValue(n.doubleValue());
+        } else if (value instanceof Boolean b) {
+            cell.setCellValue(b);
+        } else {
+            cell.setCellValue(value.toString());
+        }
     }
 
     private Object getCellValue(Cell cell) {
